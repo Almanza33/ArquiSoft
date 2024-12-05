@@ -23,5 +23,5 @@ urlpatterns = [
     path('', include('instituciones.urls')),
     path('', include('cronogramas.urls')),
     path('', include('ordenes.urls')),
-    path('health-check/', views.healthCheck)
+    path('health/', views.health_check, name='health'),
 ]
