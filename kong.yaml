@@ -20,7 +20,7 @@ services:
         strip_path: false
       - name: login
         paths:
-          - /login
+          - /login/auth0
         strip_path: false
       - name: complete
         paths:
