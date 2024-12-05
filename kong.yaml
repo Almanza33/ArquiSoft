@@ -1,0 +1,44 @@
+_format_version: "2.1"
+
+services:
+  - name: ordenes_service
+    host: ordenes_upstream
+    protocol: http
+    routes:
+      - name: ordenes
+        paths:
+          - /ordenes
+        strip_path: false
+
+  - name: filtrar_ordenes_service
+    host: filtrar_ordenes_upstream
+    protocol: http
+    routes:
+      - name: filtrar_ordenes
+        paths:
+          - /filtrar_ordenes
+        strip_path: false
+    
+upstreams:
+  - name: ordenes_upstream
+    targets:
+      - target: 10.128.0.85:8080
+        weight: 100
+      - target: 10.128.0.86:8080
+        weight: 100
+    healthchecks:
+      threshold: 35
+      active:
+        http_path: /health/
+        timeout: 5
+        healthy:
+          successes: 2
+          interval: 5
+        unhealthy:
+          tcp_failures: 2
+          interval: 5
+
+  - name: filtrar_ordenes_upstream
+    targets:
+      - target: 10.128.0.84:8080
+        weight: 100

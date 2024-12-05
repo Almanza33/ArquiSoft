@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     'instituciones',
     'ordenes',
     'cronogramas',
-    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -77,13 +76,22 @@ WSGI_APPLICATION = 'ofipensiones.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+"""
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+"""
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ofipensiones_db',
-        'USER': 'ofipensiones_user',
+        'NAME': 'final_db',
+        'USER': 'final_user',
         'PASSWORD': 'isis2503',
-        'HOST': '10.128.0.60',
+        'HOST': '10.128.0.83',
         'PORT': '5432',
     }
 }
@@ -130,23 +138,3 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-LOGIN_URL = "/login/auth0"
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "https://dev-7k53zhc6oxlqqlf2.us.auth0.com/v2/logout?returnTo=http%3A%2F%2F34.44.255.106:8080"
-
-SOCIAL_AUTH_TRAILING_SLASH = False # Remove end slash from routes
-SOCIAL_AUTH_AUTH0_DOMAIN = 'dev-7k53zhc6oxlqqlf2.us.auth0.com'
-SOCIAL_AUTH_AUTH0_KEY = 'xpMisrIw5kr9mvo6TjMRne9y0tGpbf9K'
-SOCIAL_AUTH_AUTH0_SECRET = 'cL5CSyQ5iVUxxf_TyoIcRjA9dv37laJIWPn-feNnoLFRgTQybmBVUSX0T9DG7hXC'
-
-SOCIAL_AUTH_AUTH0_SCOPE = [
-	'openid',
-	'profile',
-	'email',
-	'role',
-]
-AUTHENTICATION_BACKENDS = {
-	'ofipensiones.auth0backend.Auth0',
-	'django.contrib.auth.backends.ModelBackend',
-}

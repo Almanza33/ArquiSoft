@@ -1,76 +1,167 @@
+# ***************** Universidad de los Andes ***********************
+# ****** Departamento de Ingeniería de Sistemas y Computación ******
+# ********** Arquitectura y diseño de Software - ISIS2503 **********
+
 resources:
 # Firewall rules
-- name: authd-firewall-django
+- name: msd-api-gateway
   type: compute.v1.firewall
   properties:
-    network: https://www.googleapis.com/compute/v1/projects/<id-proyecto>/global/networks/default
+    network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
     priority: 1000
     direction: INGRESS
     sourceRanges: 
     - 0.0.0.0/0
     targetTags:
-    - authd-django
+    - msd-api-gateway
+    allowed:
+    - IPProtocol: TCP
+      ports: 
+      - 8000
+- name: msd-services-apps
+  type: compute.v1.firewall
+  properties:
+    network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+    priority: 1000
+    direction: INGRESS
+    sourceTags: 
+    - msd-api-gateway
+    targetTags:
+    - msd-services-firewall
     allowed:
     - IPProtocol: TCP
       ports: 
       - 8080
-- name: authd-firewall-db
+- name: msd-services-apps-web
   type: compute.v1.firewall
   properties:
-    network: https://www.googleapis.com/compute/v1/projects/<id-proyecto>/global/networks/default
+    network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+    priority: 1000
+    direction: INGRESS
+    sourceRanges: 
+    - 0.0.0.0/0
+    targetTags:
+    - msd-services-firewall
+    allowed:
+    - IPProtocol: TCP
+      ports: 
+      - 8080
+- name: msd-service-db
+  type: compute.v1.firewall
+  properties:
+    network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
     priority: 1000
     direction: INGRESS
     sourceTags: 
-    - authd-django
+    - msd-services-firewall
     targetTags:
-    - authd-db
+    - msd-service-db
     allowed:
     - IPProtocol: TCP
       ports: 
       - 5432
 
-# Database instance
-- type: compute.v1.instance
-  name: authd-db-instance
+# Kong instance
+- name: msd-kong-instance
+  type: compute.v1.instance
   properties:
     zone: us-central1-a
-    machineType: https://www.googleapis.com/compute/v1/projects/<id-proyecto>/zones/us-central1-a/machineTypes/e2-micro
+    machineType: https://www.googleapis.com/compute/v1/projects/entrega4final/zones/us-central1-a/machineTypes/e2-micro
     disks:
     - deviceName: boot
       type: PERSISTENT
       boot: true
       autoDelete: true
       initializeParams:
-        sourceImage: https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-2004-focal-v20240307b
+        sourceImage: https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-101-17162-463-8
     networkInterfaces:
-    - network: https://www.googleapis.com/compute/v1/projects/<id-proyecto>/global/networks/default
-      networkIP: 10.128.0.60
+    - network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+      networkIP: 10.128.0.81
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
     tags:
       items: 
-      - authd-db
+      - msd-api-gateway
     metadata:
       items:
       - key: startup-script
         value: |
           #!/bin/bash
-          sudo apt-get update
-          sudo apt-get install -y postgresql postgresql-contrib
-          sudo -u postgres psql -c "CREATE USER monitoring_user WITH PASSWORD 'isis2503';"
-          sudo -u postgres createdb -O monitoring_user monitoring_db
-          echo "host all all 0.0.0.0/0 trust" | sudo tee -a /etc/postgresql/12/main/pg_hba.conf
-          echo "listen_addresses='*'" | sudo tee -a /etc/postgresql/12/main/postgresql.conf
-          echo "max_connections=2000" | sudo tee -a /etc/postgresql/12/main/postgresql.conf
-          sudo service postgresql restart
+          sudo mkdir /home/labs
+          cd /home/labs
+          sudo git clone https://github.com/Almanza33/ArquiSoft.git
+          cd ArquiSoft
+          sudo git checkout final
+          docker network create kong-net
+          docker run -d --name kong --network=kong-net --restart=always \
+          -v "$(pwd):/kong/declarative/" -e "KONG_DATABASE=off" \
+          -e "KONG_DECLARATIVE_CONFIG=/kong/declarative/kong.yaml" \
+          -p 8000:8000 kong/kong-gateway
 
-# App django instance
-- type: compute.v1.instance
-  name: authd-django-instance
+# Database instances
+- name: logs-db
+  type: compute.v1.instance
   properties:
     zone: us-central1-a
-    machineType: https://www.googleapis.com/compute/v1/projects/<id-proyecto>/zones/us-central1-a/machineTypes/e2-micro
+    machineType: https://www.googleapis.com/compute/v1/projects/entrega4final/zones/us-central1-a/machineTypes/e2-micro
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-101-17162-463-8
+    networkInterfaces:
+    - network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+      networkIP: 10.128.0.82
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    tags:
+      items: 
+      - msd-service-db
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          #!/bin/bash
+          docker run --restart=always -d -e POSTGRES_USER=final_user -e POSTGRES_DB=final_db -e POSTGRES_PASSWORD=isis2503 -p 5432:5432 --name final-db postgres
+
+- name: ordenes-db
+  type: compute.v1.instance
+  properties:
+    zone: us-central1-a
+    machineType: https://www.googleapis.com/compute/v1/projects/entrega4final/zones/us-central1-a/machineTypes/e2-micro
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-101-17162-463-8
+    networkInterfaces:
+    - network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+      networkIP: 10.128.0.83
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    tags:
+      items: 
+      - msd-service-db
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          #!/bin/bash
+          docker run --restart=always -d -e POSTGRES_USER=final_user -e POSTGRES_DB=final_db -e POSTGRES_PASSWORD=isis2503 -p 5432:5432 --name final-db postgres
+
+# Service instances
+- name: logs-ms
+  type: compute.v1.instance
+  properties:
+    zone: us-central1-a
+    machineType: https://www.googleapis.com/compute/v1/projects/entrega4final/zones/us-central1-a/machineTypes/e2-micro
     disks:
     - deviceName: boot
       type: PERSISTENT
@@ -79,14 +170,14 @@ resources:
       initializeParams:
         sourceImage: https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-2004-focal-v20240307b
     networkInterfaces:
-    - network: https://www.googleapis.com/compute/v1/projects/<id-proyecto>/global/networks/default
-      networkIP: 10.128.0.61
+    - network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+      networkIP: 10.128.0.84
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
     tags:
       items: 
-      - authd-django
+      - msd-services-firewall
     metadata:
       items:
       - key: startup-script
@@ -94,11 +185,80 @@ resources:
           #!/bin/bash
           sudo apt-get update
           sudo apt install python3-pip -y
-          sudo mkdir /labs
-          cd /labs
+          sudo mkdir /home/labs
+          cd /home/labs
           sudo git clone https://github.com/Almanza33/ArquiSoft.git
-          cd /ArquiSoft
-          sudo git checkout auth0
+          cd ArquiSoft
+          sudo git checkout final
           sudo pip3 install -r requirements.txt
-          sudo python3 manage.py makemigrations
-          sudo python3 manage.py migrate
+
+
+- name: ordenes-a-ms
+  type: compute.v1.instance
+  properties:
+    zone: us-central1-a
+    machineType: https://www.googleapis.com/compute/v1/projects/entrega4final/zones/us-central1-a/machineTypes/e2-micro
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-2004-focal-v20240307b
+    networkInterfaces:
+    - network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+      networkIP: 10.128.0.85
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    tags:
+      items: 
+      - msd-services-firewall
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          #!/bin/bash
+          sudo apt-get update
+          sudo apt install python3-pip -y
+          sudo mkdir /home/labs
+          cd /home/labs
+          sudo git clone https://github.com/Almanza33/ArquiSoft.git
+          cd ArquiSoft
+          sudo git checkout final
+          sudo pip3 install -r requirements.txt
+
+- name: ordenes-b-ms
+  type: compute.v1.instance
+  properties:
+    zone: us-central1-a
+    machineType: https://www.googleapis.com/compute/v1/projects/entrega4final/zones/us-central1-a/machineTypes/e2-micro
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-2004-focal-v20240307b
+    networkInterfaces:
+    - network: https://www.googleapis.com/compute/v1/projects/entrega4final/global/networks/default
+      networkIP: 10.128.0.86
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    tags:
+      items: 
+      - msd-services-firewall
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          #!/bin/bash
+          sudo apt-get update
+          sudo apt install python3-pip -y
+          sudo mkdir /home/labs
+          cd /home/labs
+          sudo git clone https://github.com/Almanza33/ArquiSoft.git
+          cd ArquiSoft
+          sudo git checkout final
+          sudo pip3 install -r requirements.txt
