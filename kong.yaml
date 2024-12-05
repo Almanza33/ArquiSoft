@@ -22,6 +22,11 @@ services:
         paths:
           - /login
         strip_path: false
+      - name: complete
+        paths:
+          - /complete/auth0
+        strip_path: false
+    
     
 upstreams:
   - name: ordenes_upstream
