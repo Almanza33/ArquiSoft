@@ -26,7 +26,17 @@ upstreams:
         weight: 100
       - target: 10.128.0.86:8080
         weight: 100
-      
+    healthchecks:
+      threshold: 35
+      active:
+        http_path: /health/
+        timeout: 5
+        healthy:
+          successes: 2
+          interval: 5
+        unhealthy:
+          tcp_failures: 2
+          interval: 5
 
   - name: filtrar_ordenes_upstream
     targets:
