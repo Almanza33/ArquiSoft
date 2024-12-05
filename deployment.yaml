@@ -189,7 +189,7 @@ resources:
           cd /home/labs
           sudo git clone https://github.com/Almanza33/ArquiSoft.git
           cd ArquiSoft
-          sudo git checkout final
+          sudo git checkout auth0
           sudo pip3 install -r requirements.txt
 
 

@@ -18,6 +18,12 @@ services:
         paths:
           - /filtrar_ordenes
         strip_path: false
+      - name: login
+        paths:
+          - /login
+        strip_path: false
+        destinations:
+          - target: 10.128.0.85:8080
     
 upstreams:
   - name: ordenes_upstream
